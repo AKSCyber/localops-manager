@@ -25,6 +25,9 @@ class RuntimeIntegrationTests(unittest.TestCase):
 
     def exercise_launcher(self, script=False):
         with tempfile.TemporaryDirectory() as folder:
+            # PowerShell expands Windows 8.3 paths (e.g. RUNNER~1) before
+            # starting Python. Use the same canonical directory in the fixture.
+            folder = str(Path(folder).resolve())
             root = Path(folder)
             sockets = [socket.socket(), socket.socket()]
             for sock in sockets:
@@ -81,6 +84,17 @@ class RuntimeIntegrationTests(unittest.TestCase):
                     self.assertEqual([item["lastStatus"] for item in saved], ["succeeded", "succeeded"])
             finally:
                 for process in processes:
+                    if process.poll() is None:
+                        try:
+                            children = localops.psutil.Process(process.pid).children(recursive=True)
+                            for child in reversed(children):
+                                try:
+                                    child.terminate()
+                                except localops.psutil.NoSuchProcess:
+                                    pass
+                            localops.psutil.wait_procs(children, timeout=5)
+                        except localops.psutil.NoSuchProcess:
+                            pass
                     if process.poll() is None:
                         process.terminate()
                     process.wait(timeout=15)
