@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07111f">
+  <meta name="application-name" content="LocalOps">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="LocalOps">
+  <title>LocalOps — Runtime command center</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/localops.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/localops.svg">
+  <link rel="stylesheet" href="/styles.css?v=10">
+</head>
+<body>
+  <section class="auth-gate" id="authGate">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="brand-mark"><i></i><i></i><i></i></span><div><strong>LocalOps</strong><small>Protected runtime control</small></div></div>
+      <p class="node-context">Computer: <strong class="node-name">Verifying…</strong></p>
+      <div id="authLoading"><p class="eyebrow">SECURITY CHECK</p><h1>Opening the control plane…</h1></div>
+      <div id="setupPanel" hidden>
+        <p class="eyebrow">ONE-TIME LOCAL SETUP</p><h1>Secure online access.</h1>
+        <p class="auth-copy">Create a LocalOps administrator password and add the key below to Microsoft Authenticator as an “Other account.” Setup is accepted only from this Windows computer.</p>
+        <div class="setup-key"><small>Authenticator setup key</small><code id="setupSecret">Generating…</code><small>Issuer: LocalOps · 6 digits · 30 seconds</small></div>
+        <form id="setupForm">
+          <label>Administrator name<input name="username" value="admin" autocomplete="username" required></label>
+          <label>New password<input name="password" type="password" minlength="12" autocomplete="new-password" required><small>At least 12 characters.</small></label>
+          <label>Current Authenticator code<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required></label>
+          <button class="button primary" type="submit">Finish secure setup</button>
+        </form>
+      </div>
+      <div id="setupRemotePanel" hidden>
+        <p class="eyebrow">LOCAL SETUP REQUIRED</p><h1>Online controls are locked.</h1>
+        <p class="auth-copy">Open <strong>http://127.0.0.1:8790</strong> on the Windows computer and complete the one-time password and Authenticator setup. No runtime data is available at <strong>https://localops.solliegiance.com</strong> until then.</p>
+      </div>
+      <div id="loginPanel" hidden>
+        <p class="eyebrow">ADMINISTRATOR SIGN-IN</p><h1>Verify before control.</h1>
+        <p class="auth-copy">Use the independent LocalOps password and a current Microsoft Authenticator code or recovery code.</p>
+        <form id="loginForm">
+          <label>Password<input name="password" type="password" autocomplete="current-password" required></label>
+          <label>Authenticator or recovery code<input name="code" autocomplete="one-time-code" required></label>
+          <button class="button primary" type="submit">Sign in</button>
+        </form>
+      </div>
+      <div id="recoveryPanel" hidden>
+        <p class="eyebrow">RECOVERY CODES</p><h1>Save these once.</h1>
+        <p class="auth-copy">Each code works once if Authenticator is unavailable. Keep them offline; LocalOps stores only their hashes.</p>
+        <pre id="recoveryCodes"></pre>
+        <button class="button primary" id="continueDashboard" type="button">Continue to LocalOps</button>
+      </div>
+      <p class="form-error" id="authError"></p>
+    </div>
+  </section>
+
+  <div class="app-shell" id="appShell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="#top" aria-label="LocalOps home">
+        <span class="brand-mark"><i></i><i></i><i></i></span>
+        <span><strong>LocalOps</strong><small>Runtime command center</small></span>
+      </a>
+      <nav aria-label="Dashboard sections">
+        <a class="nav-link" href="#fleet"><span>▦</span>All computers</a>
+        <a class="nav-link active" href="#applications"><span>◆</span>Applications</a>
+        <a class="nav-link" href="#system"><span>⌁</span>Remote control</a>
+        <a class="nav-link" href="#schedules"><span>◷</span>Schedules</a>
+        <a class="nav-link" href="#performance"><span>⌁</span>Performance</a>
+        <a class="nav-link" href="#discovery"><span>⌁</span>Discovery <b id="discoveryBadge">0</b></a>
+        <a class="nav-link" href="#activity"><span>◷</span>Activity</a>
+      </nav>
+      <div class="sidebar-status">
+        <span class="live-dot"></span>
+        <div><strong>Online protected</strong><small>Local origin · authenticated tunnel</small></div>
+      </div>
+    </aside>
+
+    <main id="top">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Windows service console</p>
+          <h1><span class="node-name">Verifying computer…</span></h1>
+          <p class="intro">See what is actually listening, verify ownership, and control only the processes you intended.</p>
+        </div>
+        <div class="top-actions">
+          <label class="node-picker">Detailed view<select id="nodeSelect" aria-label="Computer to view and control"></select></label>
+          <button class="button secondary" id="addNodeButton" type="button">+ Add computer</button>
+          <div class="last-scan"><span id="scanPulse"></span><small>Last scan</small><strong id="lastScan">Checking…</strong></div>
+          <button class="button secondary" id="refreshButton" type="button">Refresh</button>
+          <button class="button secondary" id="installButton" type="button" hidden>Install app</button>
+          <button class="button secondary" id="logoutButton" type="button" hidden>Sign out</button>
+          <button class="button primary" id="addButton" type="button">+ Add application</button>
+        </div>
+      </header>
+
+      <section class="section" id="fleet">
+        <div class="section-heading"><div><p class="eyebrow">Connected machines</p><h2>All computers</h2></div>
+          <div class="fleet-toolbar"><button class="button secondary" id="fleetRefresh">Refresh computers</button><button class="button secondary" id="fleetGrant">Share this computer</button><button class="button primary" id="fleetPair">Connect computer</button></div>
+        </div>
+        <p class="panel-intro">View and control paired computers together. Each action names its target computer. Detailed tools below apply to <span class="node-name"></span>.</p>
+        <p id="fleetNotice" role="status">Loading computers…</p>
+        <div class="fleet-grid" id="fleetGrid"></div>
+        <details class="panel fleet-access"><summary>Access granted to other dashboards</summary><div id="fleetGrants"></div></details>
+      </section>
+      <dialog id="fleetDialog" class="fleet-dialog">
+        <form id="fleetForm"><h2 id="fleetDialogTitle">Connect computer</h2><p id="fleetDialogHelp"></p>
+          <div id="fleetPairFields"><label>Dedicated HTTPS address<input name="url" type="url" placeholder="https://localops-helios.example.com"></label><label>Machine ID<input name="nodeId" autocomplete="off"></label><label>Access key<input name="token" type="password" autocomplete="off"></label></div>
+          <div id="fleetGrantFields" hidden><label>Dashboard receiving access<input name="label" maxlength="80" placeholder="Maximus dashboard"></label></div>
+          <div id="fleetGrantResult" hidden><p>Copy these details to Connect computer on the other dashboard. The key is shown only here and grants status and app controls for 90 days.</p><label>Machine ID<input id="fleetOwnId" readonly></label><label>Access key<input id="fleetOwnToken" readonly></label></div>
+          <p id="fleetDialogError" role="alert"></p><div class="fleet-toolbar"><button class="button secondary" id="fleetDialogClose" type="button">Close</button><button class="button primary" id="fleetDialogSubmit" type="submit">Connect</button></div>
+        </form>
+      </dialog>
+      <p id="runtimeUpdateNotice" class="safe-note warn" role="status" hidden></p>
+
+      <section class="summary-grid" aria-label="Runtime summary">
+        <article class="summary-card green"><span class="summary-icon">↗</span><div><strong id="runningCount">—</strong><small>Running well</small></div><em>Healthy</em></article>
+        <article class="summary-card amber"><span class="summary-icon">!</span><div><strong id="attentionCount">—</strong><small>Need attention</small></div><em>Review</em></article>
+        <article class="summary-card slate"><span class="summary-icon">○</span><div><strong id="offlineCount">—</strong><small>Offline</small></div><em>Idle</em></article>
+        <article class="summary-card blue"><span class="summary-icon">⌁</span><div><strong id="listenerCount">—</strong><small>TCP listeners seen</small></div><em>Observed</em></article>
+      </section>
+
+      <section class="section performance-section" id="performance">
+        <div class="section-heading">
+          <div><p class="eyebrow">Live machine telemetry</p><h2>Performance</h2></div>
+          <div class="telemetry-state"><span class="live-dot"></span><span id="metricsSampledAt">Starting counters…</span></div>
+        </div>
+        <div class="performance-grid">
+          <article class="performance-card cpu-card"><div class="performance-head"><div><small>CPU</small><strong id="metricCpu">—</strong></div><span id="metricCpuMeta">Windows</span></div><canvas id="chartCpu" aria-label="CPU utilization history"></canvas></article>
+          <article class="performance-card cpu-card"><div class="performance-head"><div><small>CPU temperature</small><strong id="metricCpuTemperature">—</strong></div><span id="metricCpuTemperatureMeta">Checking sensors</span></div><canvas id="chartCpuTemperature" aria-label="CPU temperature in degrees Celsius"></canvas><small id="cpuSensorDetail" class="safety-copy"></small></article>
+          <article class="performance-card memory-card"><div class="performance-head"><div><small>Memory</small><strong id="metricMemory">—</strong></div><span id="metricMemoryMeta">RAM</span></div><canvas id="chartMemory" aria-label="Memory utilization history"></canvas></article>
+          <article class="performance-card gpu-card"><div class="performance-head"><div><small>GPU</small><strong id="metricGpu">—</strong></div><span id="metricGpuMeta">Detecting</span></div><canvas id="chartGpu" aria-label="GPU utilization history"></canvas></article>
+          <article class="performance-card vram-card"><div class="performance-head"><div><small>GPU memory</small><strong id="metricVram">—</strong></div><span id="metricVramMeta">VRAM</span></div><canvas id="chartVram" aria-label="GPU memory history"></canvas></article>
+          <article class="performance-card network-card"><div class="performance-head"><div><small>Network</small><strong id="metricNetwork">—</strong></div><span id="metricNetworkMeta">Down / up</span></div><canvas id="chartNetwork" aria-label="Network throughput history"></canvas><div class="chart-key"><i class="blue-key"></i>Receive <i class="cyan-key"></i>Send</div></article>
+          <article class="performance-card disk-card"><div class="performance-head"><div><small>Disk activity</small><strong id="metricDisk">—</strong></div><span id="metricDiskMeta">Read / write</span></div><canvas id="chartDisk" aria-label="Disk throughput history"></canvas><div class="chart-key"><i class="green-key"></i>Read <i class="amber-key"></i>Write</div></article>
+        </div>
+        <div class="volume-strip" id="volumeStrip"></div>
+      </section>
+
+      <section class="section" id="system">
+        <div class="section-heading">
+          <div><p class="eyebrow">Fresh-start command deck</p><h2>Remote control</h2></div>
+          <span class="quiet-label" id="systemPrivilege">Checking Windows privileges…</span>
+        </div>
+        <div class="remote-grid">
+          <article class="panel remote-card">
+            <div class="panel-head"><div><p class="eyebrow">Shared AI runtimes</p><h3>Model servers</h3></div><span class="live-dot"></span></div>
+            <p class="panel-intro">Start or stop the local model servers after Windows signs in. Confirm with Yes or No; process ownership checks remain enforced.</p>
+            <div class="quick-runtime" data-runtime="ollama"><div><strong>Ollama</strong><small id="quickStateOllama">Checking…</small></div><button class="button primary" id="quickOllama" data-quick-app="ollama">Start</button></div>
+            <div class="quick-runtime" data-runtime="llama-cpp"><div><strong>llama.cpp</strong><small id="quickStateLlama">Checking…</small></div><button class="button primary" id="quickLlama" data-quick-app="llama-cpp">Start</button></div>
+          </article>
+          <article class="panel remote-card power-card">
+            <div class="panel-head"><div><p class="eyebrow">Windows power</p><h3>PC controls</h3></div><span class="warning-mark compact">!</span></div>
+            <p class="panel-intro">Every power request requires your LocalOps password again and an exact phrase. Shutdown waits 30 seconds so it can be cancelled.</p>
+            <div class="power-actions">
+              <button class="button danger" data-system-action="shutdown">Shutdown PC</button>
+              <button class="button secondary" id="hibernateButton" data-system-action="hibernate">Hibernate PC</button>
+              <button class="button ghost" data-system-action="cancel-shutdown">Cancel shutdown</button>
+            </div>
+            <small class="safety-copy" id="hibernateStatus">Checking hibernation support…</small>
+          </article>
+        </div>
+      </section>
+
+      <section class="section" id="applications">
+        <div class="section-heading">
+          <div><p class="eyebrow">Registered applications</p><h2>Control center</h2></div>
+          <div class="filters" id="filters" role="group" aria-label="Filter applications">
+            <button class="filter active" data-filter="all">All</button>
+            <button class="filter" data-filter="running">Running</button>
+            <button class="filter" data-filter="attention">Attention</button>
+            <button class="filter" data-filter="offline">Offline</button>
+          </div>
+        </div>
+        <div class="app-grid" id="appGrid"><div class="loading-card">Reading local listeners…</div></div>
+      </section>
+
+      <section class="section panel" id="schedules">
+        <div class="section-heading"><div><p class="eyebrow">Automatic application controls</p><h2>Schedules</h2></div><span id="scheduleTimezone" class="quiet-label"></span></div>
+        <p class="panel-intro">Start or stop an app once, every day, or every week. The PC must be awake and LocalOps running. Runs missed by more than five minutes are skipped. Repeats keep the UTC offset chosen here, including across daylight-saving changes.</p>
+        <form id="scheduleForm">
+          <div class="field-row"><label>Application<select name="appId" id="scheduleApp" required></select></label><label>Action<select name="action"><option value="start">Start</option><option value="stop">Stop</option></select></label></div>
+          <div class="field-row"><label>First run (this device's local time)<input name="runAt" type="datetime-local" required></label><label>Repeat<select name="repeat"><option value="once">Once</option><option value="daily">Every day</option><option value="weekly">Every week</option></select></label></div>
+          <div class="modal-actions"><button class="button primary" type="submit">Add schedule</button></div>
+          <p id="scheduleError" class="form-error" role="status"></p>
+        </form>
+        <div id="scheduleList" class="schedule-list" aria-live="polite"><p class="empty">Loading schedules…</p></div>
+      </section>
+
+      <section class="section split-section" id="discovery">
+        <div class="panel discovery-panel">
+          <div class="panel-head">
+            <div><p class="eyebrow">Unregistered listeners</p><h2>Discovery inbox</h2></div>
+            <span class="quiet-label">Observe first, control later</span>
+          </div>
+          <p class="panel-intro">These local ports are active but are not yet assigned to a registered application. Importing one is always observe-only.</p>
+          <div class="listener-list" id="discoveryList"><p class="empty">Scanning…</p></div>
+        </div>
+
+        <div class="panel" id="activity">
+          <div class="panel-head">
+            <div><p class="eyebrow">Persistent audit trail</p><h2>Recent activity</h2></div>
+            <span class="quiet-label">Latest 80 events</span>
+          </div>
+          <div class="timeline" id="eventList"><p class="empty">No activity yet.</p></div>
+        </div>
+      </section>
+
+      <footer><span>LocalOps 1.6.0 interface · installable PWA</span><span>Remote sessions require password, Authenticator and CSRF verification.</span></footer>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="detailModal" hidden>
+    <section class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+      <button class="close-button" data-close="detailModal" aria-label="Close">×</button>
+      <div id="detailContent"></div>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="appModal" hidden>
+    <section class="modal form-modal" role="dialog" aria-modal="true" aria-labelledby="appModalTitle">
+      <button class="close-button" data-close="appModal" aria-label="Close">×</button>
+      <p class="eyebrow">Registry</p>
+      <h2 id="appModalTitle">Add an application</h2>
+      <p class="modal-copy">New entries begin in observe-only mode unless you explicitly enable safe controls.</p>
+      <form id="appForm">
+        <input type="hidden" name="id">
+        <div class="field-row">
+          <label>Name<input name="name" required maxlength="80" placeholder="My local app"></label>
+          <label>Group<input name="group" maxlength="40" value="Applications" placeholder="Applications"></label>
+        </div>
+        <label>Description<textarea name="description" maxlength="280" rows="2" placeholder="What this runtime does"></textarea></label>
+        <div class="field-row">
+          <label>Open URL<input name="url" placeholder="http://127.0.0.1:8080"></label>
+          <label>Health URL<input name="healthUrl" placeholder="http://127.0.0.1:8080/health"></label>
+        </div>
+        <div class="field-row">
+          <label>Managed ports<input name="managedPorts" placeholder="8080, 8081"></label>
+          <label>Expected process names<input name="expectedProcesses" placeholder="node, python"></label>
+        </div>
+        <label>Working directory<input name="workingDirectory" placeholder="D:\Apps\My App"></label>
+        <label>Start script or executable<input name="startPath" placeholder="D:\Apps\My App\start.ps1"></label>
+        <label>Launcher arguments (JSON array)<textarea name="startArgs" rows="2" placeholder='["-NoBrowser"]'></textarea></label>
+        <div class="check-row">
+          <label class="check"><input type="checkbox" name="manage"> Enable start and verified stop controls</label>
+          <label class="check"><input type="checkbox" name="confirm"> Require explicit Yes confirmation for API controls</label>
+        </div>
+        <div class="modal-actions"><button type="button" class="button secondary" data-close="appModal">Cancel</button><button class="button primary" type="submit">Save application</button></div>
+      </form>
+    </section>
+  </div>
+
+  <div class="modal-backdrop" id="confirmModal" hidden>
+    <section class="modal confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <span class="warning-mark">!</span>
+      <h2 id="confirmTitle">Confirm action</h2>
+      <p id="confirmMessage"></p>
+      <label id="confirmNameWrap" hidden><span id="confirmNameLabel">Type the application name</span><input id="confirmName" autocomplete="off"></label>
+      <label id="confirmPasswordWrap" hidden>Re-enter the LocalOps password<input id="confirmPassword" type="password" autocomplete="current-password"></label>
+      <div class="modal-actions"><button type="button" class="button secondary" data-close="confirmModal" id="cancelAction">No</button><button type="button" class="button danger" id="confirmAction">Yes</button></div>
+    </section>
+  </div>
+
+  <div class="toast-region" id="toasts" aria-live="polite"></div>
+  <script src="/app.js?v=10" defer></script>
+  <script src="/fleet.js?v=10" defer></script>
+</body>
+</html>
+

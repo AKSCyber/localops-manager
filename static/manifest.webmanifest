@@ -1,0 +1,35 @@
+{
+  "id": "/",
+  "name": "LocalOps Runtime Command Center",
+  "short_name": "LocalOps",
+  "description": "Secure remote control and live telemetry for local applications and AI runtimes.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "orientation": "any",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/localops.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Applications",
+      "short_name": "Apps",
+      "url": "/#applications",
+      "icons": [{"src": "/icons/localops.svg", "sizes": "any", "type": "image/svg+xml"}]
+    },
+    {
+      "name": "Remote control",
+      "short_name": "Control",
+      "url": "/#system",
+      "icons": [{"src": "/icons/localops.svg", "sizes": "any", "type": "image/svg+xml"}]
+    }
+  ]
+}
